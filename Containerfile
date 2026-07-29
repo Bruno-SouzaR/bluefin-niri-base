@@ -8,7 +8,7 @@ FROM ghcr.io/ublue-os/bluefin-dx:latest
 
 ### CUSTOM PACKAGES & COMPOSITOR (Niri + Ghostty + Wayland Tools)
 RUN dnf copr enable -y yalter/niri && \
-    dnf copr enable -y pgevor/ghostty && \
+    dnf copr enable -y pgevor/ghostty fedora-42-x86_64 && \
     dnf install -y \
     niri \
     xwayland-satellite \
