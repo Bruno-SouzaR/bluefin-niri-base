@@ -74,6 +74,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # 🟢 ADICIONE ESTE BLOCO PARA O PODMAN
+      - name: Podman login to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ghcr.io -u "${{ github.actor }}" --password-stdin    
+
       # This actually builds the container image
       - name: Build Image
         id: build-image
