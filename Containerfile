@@ -3,8 +3,8 @@ FROM scratch AS ctx
 COPY build_files /
 COPY system_files /system_files
 
-# Base Image: Otimizada para Intel Lunar Lake (Core Ultra 258V)
-FROM ghcr.io/ublue-os/bluefin-dx-whe
+# Base Image Oficial do Bluefin Developer Experience
+FROM ghcr.io/ublue-os/bluefin-dx:latest
 
 ### CUSTOM PACKAGES & COMPOSITOR (Niri + Ghostty + Wayland Tools)
 RUN dnf copr enable -y yalter/niri && \
