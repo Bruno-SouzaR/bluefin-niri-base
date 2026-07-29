@@ -3,33 +3,55 @@ FROM scratch AS ctx
 COPY build_files /
 COPY system_files /system_files
 
-# Base Image
-FROM ghcr.io/ublue-os/bazzite:stable@sha256:b923f92d5a5b59eb992e269383eba2744601052da9d3d1595f76e79aa6ce2df0
-## Other possible base images include:
-# FROM ghcr.io/ublue-os/bazzite:testing
-# FROM ghcr.io/ublue-os/aurora:stable
-# FROM ghcr.io/ublue-os/bluefin-nvidia-open:stable
-# 
-# ... and so on, here are more base images
-# Universal Blue Images: https://github.com/orgs/ublue-os/packages
-# Fedora base image: quay.io/fedora/fedora-bootc:44
-# CentOS base images: quay.io/centos-bootc/centos-bootc:stream10
+# Base Image: Otimizada para Intel Lunar Lake (Core Ultra 258V)
+FROM ghcr.io/ublue-os/bluefin-whe:latest
 
-### [IM]MUTABLE /opt
-## Some bootable images, like Fedora, have /opt symlinked to /var/opt, in order to
-## make it mutable/writable for users. However, some packages write files to this directory,
-## thus its contents might be wiped out when bootc deploys an image, making it troublesome for
-## some packages. Eg, google-chrome, docker-desktop.
-##
-## Uncomment the following line if one desires to make /opt immutable and be able to be used
-## by the package manager.
-
-# RUN rm /opt && mkdir /opt
+### CUSTOM PACKAGES & COMPOSITOR (Niri + Ghostty + Wayland Tools)
+RUN dnf copr enable -y yalter/niri && \
+    dnf copr enable -y pgevor/ghostty && \
+    dnf install -y \
+    niri \
+    xwayland-satellite \
+    ghostty \
+    waybar \
+    fuzzel \
+    mako \
+    grim \
+    slurp \
+    wl-clipboard \
+    xdg-desktop-portal-gnome \
+    xdg-desktop-portal-gtk \
+    # Dependências para compilação do qylock
+    git \
+    gcc \
+    clang \
+    cargo \
+    rust \
+    pam-devel \
+    wayland-devel \
+    wayland-protocols-devel \
+    libxkbcommon-devel \
+    pkgconf-pkg-config && \
+    # Compilação e Instalação do qylock a partir do GitHub
+    git clone https://github.com/Darkkal44/qylock.git /tmp/qylock && \
+    cd /tmp/qylock && \
+    if [ -f "Cargo.toml" ]; then \
+        cargo build --release && \
+        cp target/release/qylock /usr/bin/ ; \
+    elif [ -f "meson.build" ]; then \
+        meson setup build && ninja -C build install ; \
+    elif [ -f "Makefile" ] || [ -f "CMakeLists.txt" ]; then \
+        make && make install ; \
+    fi && \
+    # Configuração de permissões PAM para autenticação de desbloqueio de tela
+    ( [ -f "pam/qylock" ] && cp pam/qylock /etc/pam.d/qylock || \
+      [ -f "qylock.pam" ] && cp qylock.pam /etc/pam.d/qylock || \
+      echo -e "auth include system-auth\naccount include system-auth\npassword include system-auth\nsession include system-auth" > /etc/pam.d/qylock ) && \
+    # Limpeza de binários e caches de compilação
+    rm -rf /tmp/qylock ~/.cargo && \
+    dnf clean all
 
 ### MODIFICATIONS
-## make modifications desired in your image and install packages by modifying the build.sh script
-## the following RUN directive does all the things required to run "build.sh" as recommended.
-
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
@@ -37,5 +59,4 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     /ctx/build.sh
 
 ### LINTING
-## Verify final image and contents are correct.
 RUN bootc container lint
